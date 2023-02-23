@@ -1,0 +1,87 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May 23 12:14:56 2022
+
+@author: Jonathan
+"""
+
+import Spotifygetters
+import pandas as pd
+
+Token="BQD7S20jsbNFFDlZXSfEGhDJH0J1Y5rugxBumakNwk8A3AP-Mn7S5GuhLpnf1yxS0JIPVsdwoeV4XNnFRUnAGoZsqitHi5JU9cfaBcVeLxVHr3jexQGyWGAlKC_u9qYuxw1Y9b9MJAg9CXvvRJIYO-h17FAUxgnJ"
+
+album_ID="0r8D5N674HbTXlR3zNxeU1"
+song_ID="4cOdK2wGLETKBW3PvgPWqT"
+artist_ID="0gxyHStUsqpMadRV0Di1Qt"
+
+
+
+
+def artist_to_dataset(artist_ID,Token):  # lägg in try/except lägg till artist ID i datasetet så att det går att se om det finns med  och går att scanna från datasetet
+    columns=["Song name","Song popularity","Song artists","Song preview","Song available markets","Song duration","Song explicit","Song islocal", 
+             "Album popularity","album copyrights", "album label","album name","album artists","album release date" ,"album_available_markets","album images","album total tracks", 
+             "Artist name", "Followers", "artist popularity","artist genres","artist image","Artist total albums"]
+    all_songs=[]
+    artist_list=[]
+    
+    artist_info     =    Spotifygetters.get_artist_info(artist_ID,Token)
+    
+    
+    artist_list.append(artist_info["name"])
+    artist_list.append(artist_info["followers"]["total"])
+    artist_list.append(artist_info["popularity"])
+    artist_list.append(artist_info["genres"])
+    artist_list.append(artist_info["images"])   
+    
+    
+    
+    artist_albums = Spotifygetters.get_artist_albums(artist_ID,Token)    
+    
+    artist_list.append(artist_albums["total"])
+    #artist_list.extend([artist_followers,artist_genres,artist_name,artist_popularity,artist_images,artist_total_albums])
+    
+    # Loopa igenom
+    for album in artist_albums["items"]:  
+        album_list=[]
+        
+        detailed_album  =   Spotifygetters.get_album_info(album["uri"].split(":")[-1]  ,  Token)
+        
+        if detailed_album["album_type"] != "compilation":  # vad exakt är en compilation?
+            album_list.append(detailed_album["popularity"])
+            album_list.append(detailed_album["copyrights"])
+            album_list.append(detailed_album["label"])
+            album_list.append(detailed_album["name"])
+            album_list.append(detailed_album["artists"])
+            album_list.append(detailed_album["release_date"])
+            album_list.append(detailed_album["available_markets"])
+            album_list.append(detailed_album["images"])
+            album_list.append(detailed_album["total_tracks"])
+            
+            #album_list.extend([album_artists, album_available_markets, album_copyrights, album_label, album_popularity, album_images, album_name , album_release_date, album_total_tracks])
+            
+            for song in detailed_album["tracks"]["items"]:
+                song_list=[]
+                
+                detailed_song = Spotifygetters.get_song_info(song["uri"].split(":")[-1]  ,  Token)
+                song_list.append( detailed_song["name"])
+                song_list.append( detailed_song["popularity"])
+                song_list.append( detailed_song["artists"])
+                song_list.append( detailed_song["preview_url"])
+                song_list.append( detailed_song["available_markets"])
+                song_list.append( detailed_song["duration_ms"])
+                song_list.append( detailed_song["explicit"])
+                song_list.append( detailed_song["is_local"])
+                
+                all_songs.append(song_list + album_list +  artist_list)
+                
+    print("artist scan complete")
+    return pd.DataFrame(data=all_songs,columns=columns)
+        
+
+x=artist_to_dataset(artist_ID,Token)
+
+related_artists=Spotifygetters.get_related_artists(artist_ID,Token)
+
+for artists in related_artists["artists"]:
+    artist_ID = artists["uri"].split(":")[-1]
+    x=x.append(artist_to_dataset(artist_ID,Token))

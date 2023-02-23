@@ -1,0 +1,44 @@
+import pandas as pd
+import Spotifygetters
+import ast
+from datetime import date
+
+file_path="Test321.xlsx"
+Token="BQCvlopOW-8CmzjcrJrydnT6ToU1gBh4m87Sd8QDKACbtbBYu54oL_YMuEztI-R8nqqPEEcKDmkQU98hL_UGZHDzeqe9Aq3Tzr5KWdj9dXVQKokXWX6MRHU_KmBUAwxuaON-Q5mPTsDAN4H_i8ysg3ASF5mGAvki"
+dataframe=pd.read_excel(file_path,index_col=None)
+
+
+def update_dataframe(dataframe,Token):
+    artist_info = {"id": ""}
+    album_info = {"id": ""}
+    today = date.today()
+    
+    for i in range(dataframe.shape[0]):
+        if artist_info["id"] != dataframe["Artist ID"][i]:
+            
+                artist_info = Spotifygetters.get_artist_info(dataframe["Artist ID"][i],Token)    
+                latest_followers = artist_info["followers"]["total"]
+                latest_artist_popularity = artist_info["popularity"]
+                
+                old_artist_popularity=ast.literal_eval(dataframe["artist popularity"][i])
+                old_followers=ast.literal_eval(dataframe["Followers"][i])
+                
+        dataframe["Followers"][i]=old_followers+[latest_followers]
+        dataframe["artist popularity"][i]=old_artist_popularity+[latest_artist_popularity]
+        
+        
+        if album_info["id"] != dataframe["Album ID"][i]:
+            album_info  =    Spotifygetters.get_album_info(dataframe["Album ID"][i],Token)
+
+            latest_album_popularity = album_info["popularity"]
+            old_album_popularity   =     ast.literal_eval(dataframe["Album popularity"][i])
+        
+        dataframe["Album popularity"][i] = old_album_popularity+[latest_album_popularity]
+        
+        song_info=Spotifygetters.get_song_info(dataframe["Song ID"][i],Token)
+        dataframe["Song popularity"][i]=ast.literal_eval(dataframe["Song popularity"][i]) + [song_info["popularity"]]
+        dataframe["Latest Update"][i]=ast.literal_eval(dataframe["Latest Update"][i]) + [today.strftime("%d/%m/%Y")]
+        
+update_dataframe(dataframe,Token)
+
+dataframe.to_excel("Test321.xlsx",index=False)
